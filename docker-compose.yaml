@@ -1,0 +1,47 @@
+services:
+  # 1. Database (Redis)
+  db:
+    image: redis:alpine
+    restart: always
+    networks:
+      - jaringan-kita
+
+  # 2. Aplikasi Python (Target Self-Healing)
+  app:
+    build: .
+    container_name: python-ku
+    # --- LOGIC AUTO RECOVERY ---
+    restart: on-failure:5  # Restart max 5 kali jika crash/error
+    ports:
+      - "5000:5000"
+    networks:
+      - jaringan-kita
+    depends_on:
+      - db
+    # --- LOGIC HEALTHCHECK (Sensor Detak Jantung) ---
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 10s    # Cek setiap 10 detik
+      timeout: 5s      # Maksimal menunggu respon 5 detik
+      retries: 3       # Jika gagal 3x berturut-turut, dianggap "Unhealthy"
+      start_period: 5s # Beri waktu 5 detik untuk booting awal
+
+  # 3. Nginx (Gerbang Depan)
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-ku
+    restart: always
+    ports:
+      - "8080:80" # Kita akses lewat browser di localhost:8080
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - jaringan-kita
+    # Nginx baru akan jalan JIKA App sudah "Sehat"
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  jaringan-kita:
+    driver: bridge
