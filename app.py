@@ -25,9 +25,12 @@ def home():
 # --- FITUR PENTING: KILL SWITCH ---
 @app.route('/kill')
 def kill_process():
-    print("!!! KILL SIGNAL DITERIMA !!!")
-    print("Mematikan proses secara paksa...")
-    os._exit(1) # Exit code 1 = Error (Sinyal buat Docker untuk restart)
+    # Tambahkan flush=True biar teksnya dipaksa keluar ke log
+    print("!!! KILL SIGNAL DITERIMA !!!", flush=True) 
+    print("Mematikan proses secara paksa...", flush=True)
+    
+    time.sleep(1) # Kasih napas 1 detik biar log sempet ke-print (Optional tapi bagus)
+    os._exit(1)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
